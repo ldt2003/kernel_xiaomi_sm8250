@@ -3384,7 +3384,6 @@ binder_request_freeze_notification(struct binder_proc *proc,
 		return -EINVAL;
 	}
 
-	binder_stats_created(BINDER_STAT_FREEZE);
 	INIT_LIST_HEAD(&freeze->work.entry);
 	freeze->cookie = handle_cookie->cookie;
 	freeze->work.type = BINDER_WORK_FROZEN_BINDER;
@@ -3474,7 +3473,7 @@ binder_freeze_notification_done(struct binder_proc *proc,
 	struct binder_work *w;
 
 	binder_inner_proc_lock(proc);
-	list_for_each_entry(w, &proc->delivered_freeze, entry) {
+	list_for_each_entry(w, &proc_wrapper(proc)->delivered_freeze, entry) {
 		struct binder_ref_freeze *tmp_freeze =
 			container_of(w, struct binder_ref_freeze, work);
 
@@ -4377,7 +4376,7 @@ skip:
 			info.is_frozen = freeze->is_frozen;
 			info.cookie = freeze->cookie;
 			freeze->sent = true;
-			binder_enqueue_work_ilocked(w, &proc->delivered_freeze);
+			binder_enqueue_work_ilocked(w, &proc_wrapper(proc)->delivered_freeze);
 			binder_inner_proc_unlock(proc);
 
 			if (put_user(BR_FROZEN_BINDER, (uint32_t __user *)ptr))
@@ -4397,7 +4396,6 @@ skip:
 
 			binder_inner_proc_unlock(proc);
 			kfree(freeze);
-			binder_stats_deleted(BINDER_STAT_FREEZE);
 			if (put_user(BR_CLEAR_FREEZE_NOTIFICATION_DONE, (uint32_t __user *)ptr))
 				return -EFAULT;
 			ptr += sizeof(uint32_t);
@@ -5359,7 +5357,7 @@ static int binder_open(struct inode *nodp, struct file *filp)
 	binder_stats_created(BINDER_STAT_PROC);
 	proc->pid = current->group_leader->pid;
 	INIT_LIST_HEAD(&proc->delivered_death);
-	INIT_LIST_HEAD(&proc->delivered_freeze);
+	INIT_LIST_HEAD(&proc_wrapper(proc)->delivered_freeze);
 	INIT_LIST_HEAD(&proc->waiting_threads);
 	filp->private_data = proc;
 	mutex_lock(&binder_procs_lock);
@@ -5568,7 +5566,7 @@ static void binder_deferred_release(struct binder_proc *proc)
 	binder_proc_unlock(proc);
 	binder_release_work(proc, &proc->todo);
 	binder_release_work(proc, &proc->delivered_death);
-	binder_release_work(proc, &proc->delivered_freeze);
+	binder_release_work(proc, &proc_wrapper(proc)->delivered_freeze);
 
 	binder_debug(BINDER_DEBUG_OPEN_CLOSE,
 		     "%s: %d threads %d, nodes %d (ref %d), refs %d, active transactions %d\n",
@@ -5861,9 +5859,6 @@ static const char * const binder_return_strings[] = {
 	"BR_FAILED_REPLY",
 	"BR_FROZEN_REPLY",
 	"BR_ONEWAY_SPAM_SUSPECT",
-	"UNSUPPORTED",
-	"BR_FROZEN_BINDER",
-	"BR_CLEAR_FREEZE_NOTIFICATION_DONE",
 };
 static const char * const binder_command_strings[] = {
 	"BC_TRANSACTION",
@@ -5885,9 +5880,6 @@ static const char * const binder_command_strings[] = {
 	"BC_DEAD_BINDER_DONE",
 	"BC_TRANSACTION_SG",
 	"BC_REPLY_SG",
-	"BC_REQUEST_FREEZE_NOTIFICATION",
-	"BC_CLEAR_FREEZE_NOTIFICATION",
-	"BC_FREEZE_NOTIFICATION_DONE",
 };
 static const char * const binder_objstat_strings[] = {
 	"proc",
@@ -5897,7 +5889,6 @@ static const char * const binder_objstat_strings[] = {
 	"death",
 	"transaction",
 	"transaction_complete",
-	"freeze",
 };
 static void print_binder_stats(struct seq_file *m, const char *prefix,
 			       struct binder_stats *stats)
