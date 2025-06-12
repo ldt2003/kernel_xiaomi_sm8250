@@ -17,12 +17,13 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential libncurses-dev bison flex libssl-dev libelf-dev bc git zip binutils-aarch64-linux-gnu
+          sudo apt-get install -y build-essential libncurses-dev bison flex libssl-dev libelf-dev bc git zip binutils-aarch64-linux-gnu gcc-arm-linux-gnueabihf binutils-arm-linux-gnueabihf
 
       - name: Setup toolchain
         run: |
-          git clone https://gitlab.com/provasishh/clang.git --depth=1
-          export PATH=$(pwd)/clang/bin:$PATH
+          wget https://github.com/kdrag0n/proton-clang/releases/download/13.0.0/proton-clang-13.0.0.tar.gz
+          tar -xzf proton-clang-13.0.0.tar.gz
+          export PATH=$(pwd)/proton-clang/bin:$PATH
           clang --version
 
       - name: Check for integrate_sukisu.sh
@@ -45,17 +46,8 @@ jobs:
           cp arch/arm64/configs/vendor/munch_defconfig arch/arm64/configs/
 
       - name: Build kernel
+        env:
+          CROSS_COMPILE_ARM32: arm-linux-gnueabihf-
         run: |
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CLANG_TRIPLE=aarch64-linux-gnu- CC=clang munch_defconfig
-          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CLANG_TRIPLE=aarch64-linux-gnu- CC=clang -j$(nproc)
-
-      - name: Clone AnyKernel3
-        run: |
-          git clone https://github.com/yassshhhh15/AnyKernel3.git --depth=1 anykernel
-
-      - name: Package with AnyKernel3
-        run: |
-          cp arch/arm64/boot/Image.gz-dtb anykernel/
-          cd anykernel
-          sed -i 's/#block=/block=\/dev\/block\/bootdevice\/by-name\/boot/' anykernel.sh
-          sed -i 's/#device for Redmi K40S/POCO F4
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CLANG_TRIPLE=aarch64-linux
