@@ -2,7 +2,7 @@ name: Build Kernel with SukiSU-Ultra and AnyKernel3
 on:
   push:
     branches:
-      - sukisu-anykernel
+      - walt
   workflow_dispatch:
 
 jobs:
@@ -37,7 +37,12 @@ jobs:
       - name: Check for munch_defconfig
         run: |
           ls -la arch/arm64/configs/
-          if [ ! -f arch/arm64/configs/munch_defconfig ]; then echo "File munch_defconfig not found"; exit 1; fi
+          ls -la arch/arm64/configs/vendor/
+          if [ ! -f arch/arm64/configs/vendor/munch_defconfig ]; then echo "File munch_defconfig not found in vendor"; exit 1; fi
+
+      - name: Copy munch_defconfig
+        run: |
+          cp arch/arm64/configs/vendor/munch_defconfig arch/arm64/configs/
 
       - name: Build kernel
         run: |
@@ -53,11 +58,4 @@ jobs:
           cp arch/arm64/boot/Image.gz-dtb anykernel/
           cd anykernel
           sed -i 's/#block=/block=\/dev\/block\/bootdevice\/by-name\/boot/' anykernel.sh
-          sed -i 's/#device.name1=/device.name1=munch/' anykernel.sh
-          zip -r9 ../kernel.zip * -x .git README.md *placeholder
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: kernel-zip
-          path: kernel.zip
+          sed -i 's/#device for Redmi K40S/POCO F4
