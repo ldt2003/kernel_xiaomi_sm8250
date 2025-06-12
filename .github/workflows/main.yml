@@ -1,0 +1,56 @@
+name: Build Kernel with SukiSU-Ultra and AnyKernel3
+on:
+  push:
+    branches:
+      - sukisu-anykernel
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout kernel repository
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential libncurses-dev bison flex libssl-dev libelf-dev bc git zip
+
+      - name: Setup toolchain
+        run: |
+          git clone https://gitlab.com/provasishh/clang.git --depth=1
+          export PATH=$(pwd)/clang/bin:$PATH
+          clang --version
+
+      - name: Check for integrate_sukisu.sh
+        run: |
+          ls -la
+          if [ ! -f integrate_sukisu.sh ]; then echo "File integrate_sukisu.sh not found"; exit 1; fi
+
+      - name: Integrate SukiSU-Ultra
+        run: |
+          bash integrate_sukisu.sh
+
+      - name: Build kernel
+        run: |
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CLANG_TRIPLE=aarch64-linux-gnu- CC=clang munch_defconfig
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CLANG_TRIPLE=aarch64-linux-gnu- CC=clang -j$(nproc)
+
+      - name: Clone AnyKernel3
+        run: |
+          git clone https://github.com/yassshhhh15/AnyKernel3.git --depth=1 anykernel
+
+      - name: Package with AnyKernel3
+        run: |
+          cp arch/arm64/boot/Image.gz-dtb anykernel/
+          cd anykernel
+          sed -i 's/#block=/block=\/dev\/block\/bootdevice\/by-name\/boot/' anykernel.sh
+          sed -i 's/#device.name1=/device.name1=munch/' anykernel.sh
+          zip -r9 ../kernel.zip * -x .git README.md *placeholder
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: kernel-zip
+          path: kernel.zip
