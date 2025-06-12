@@ -106,4 +106,17 @@ $(info -- SUSFS_VERSION: $(SUSFS_VERSION))
 else
 $(info -- You have not integrate susfs in your kernel.)
 $(info -- Read: https://gitlab.com/simonpunk/susfs4ksu)
+ifndef SUKISU_EXPECTED_SIZE
+SUKISU_EXPECTED_SIZE := 0x35c
+endif
+
+ifndef SUKISU_EXPECTED_HASH
+SUKISU_EXPECTED_HASH := 947ae944f3de4ed4c21a7e4f7953ecf351bfa2b36239da37a34111ad29993eef
+endif
+
+$(info -- SukiSU Manager signature size: $(SUKISU_EXPECTED_SIZE))
+$(info -- SukiSU Manager signature hash: $(SUKISU_EXPECTED_HASH))
+
+ccflags-y += -DEXPECTED_SUKISU_SIZE=$(SUKISU_EXPECTED_SIZE)
+ccflags-y += -DEXPECTED_SUKISU_HASH=\"$(SUKISU_EXPECTED_HASH)\"
 endif
