@@ -2,7 +2,7 @@ name: Build Kernel with SukiSU-Ultra and AnyKernel3
 on:
   push:
     branches:
-      - sukisu-anykernel
+      - walt
   workflow_dispatch:
 
 jobs:
